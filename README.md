@@ -6,10 +6,12 @@ It's also possible to use it to initiate many computers, as the files to autoupd
 
 ## Images
 On computer boot  
-<img width="723" height="419" alt="2026-04-14_22-39-32" src="https://github.com/user-attachments/assets/14700f8c-b2f6-4ec1-b4e5-ca93559905fd" />
+<img width="723" height="419" alt="2026-04-14_22-39-32" src="https://github.com/user-attachments/assets/5ee52fcf-8e97-4348-98aa-d0a1652cc0c2" />
+
 
 Settings/boot interrupt interface  
-<img width="717" height="413" alt="2026-04-14_22-40-29" src="https://github.com/user-attachments/assets/932f59f6-0b31-4b59-bd2e-5ff706ef2162" />
+<img width="717" height="413" alt="2026-04-14_22-40-29" src="https://github.com/user-attachments/assets/a954439e-532b-4351-ba54-e4e6a941543f" />
+
 
 ## Installation & setup
 ###### To install the bootloader 
