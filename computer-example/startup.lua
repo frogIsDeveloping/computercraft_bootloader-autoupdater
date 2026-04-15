@@ -30,7 +30,7 @@ local function loadSettings()
             file.close()
         else
             -- Default settings
-            SETTINGS["UPDATE_CHANNEL"] = ""
+            SETTINGS["UPDATE_CHANNEL"] = "https://raw.githubusercontent.com/frogIsDeveloping/computercraft_bootloader-autoupdater/refs/heads/latest/auto-update_example/buildNumber.txt"
             SETTINGS["AUTO_UPDATE"] = "false"
 
             SETTINGS["BOOT_TIME"] = "5"
@@ -61,7 +61,7 @@ loadSettings()
 local function bootTimer()
     for i=tonumber(SETTINGS["BOOT_TIME"]),1,-1 do
         resetTerminal()
-        print("BOOTLOADER v1.1.1-beta") -- version
+        print("BOOTLOADER v1.1.2-beta") -- version
         print("")
         print("Booting in "..i.."...")
         print("Strike F3 key to interrupt boot")
