@@ -2,7 +2,9 @@
 
 A custom bootloader made to protect the computer from unauthorized changes (e.g. program termination to access files) and to (optionally) support auto/manual updating directly from GitHub repositories. It can also be used to lock the computer entirely by setting a user password.  
 The bootloader itself does not auto-update.  
-It's also possible to use it to initiate many computers, as the files to autoupdate (if any) do not have to be present initially on the computer to be downloaded.
+It's also possible to use it to initiate many computers, as the files to autoupdate (if any) do not have to be present initially on the computer to be downloaded.  
+  
+**DISCLAIMER**: I have created this for my own use. You are free to use it but it may not fit your exact needs.
 
 ## Images
 On computer boot  
