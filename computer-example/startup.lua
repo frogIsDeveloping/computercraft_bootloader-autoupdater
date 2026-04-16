@@ -1,9 +1,9 @@
 -- MIT License
 -- Copyright (c) 2026 frogIsDeveloping
 
--- Bootloader
+-- Bootloader v1.2.1-beta
 
-local interrupt = false
+local interrupt = 0
 local SETTINGS = {}
 
 local _pullEvent = os.pullEvent -- for later restore (if needed)
@@ -61,10 +61,11 @@ loadSettings()
 local function bootTimer()
     for i=tonumber(SETTINGS["BOOT_TIME"]),1,-1 do
         resetTerminal()
-        print("BOOTLOADER v1.1.2-beta") -- version
+        print("BOOTLOADER v1.2.1-beta") -- version
         print("")
         print("Booting in "..i.."...")
         print("Strike F3 key to interrupt boot")
+        print("Strike F12 key to change startup program")
         os.sleep(1)
     end
 end
@@ -73,9 +74,11 @@ local function keyInterrupt()
     repeat
         local _,key = os.pullEvent("key")
         if key == 292 then -- F3 is 292
-            interrupt = true
+            interrupt = 1
+        elseif key == 301 then -- F12 is 301
+            interrupt = 2
         end
-    until interrupt == true
+    until interrupt > 0
 end
 
 local function updateSettings()
@@ -176,6 +179,33 @@ local function loadInterruptSettings()
             print("Invalid option")
             os.sleep(1)
         end
+    end
+end
+
+local function loadChangeStartupSettings()
+    resetTerminal()
+    print("Listing available startup programs:")
+    print("")
+    local files = fs.list(SETTINGS["PROGRAM_FOLDER"])
+    local availableStartupFiles = {}
+    for i=1,#files do
+        if files[i]:match("%.lua$") then
+            availableStartupFiles[#availableStartupFiles+1] = files[i]
+            print(#availableStartupFiles.." :: "..files[i])
+        end
+    end
+    print("")
+    write("Select program by number > ")
+    local ans = tonumber(read())
+    if availableStartupFiles[ans] then
+        SETTINGS["STARTUP_PROGRAM"] = availableStartupFiles[ans]
+        updateSettings()
+        os.sleep(1)
+        os.reboot()
+    else
+        print("Invalid option!")
+        os.sleep(5)
+        os.reboot()
     end
 end
 
@@ -306,7 +336,7 @@ end
 
 parallel.waitForAny(bootTimer,keyInterrupt) -- main
 
-if interrupt == false then -- Continue booting
+if interrupt == 0 then -- Continue booting
     resetTerminal()
     if SETTINGS["USER_PASSWORD"] == "" then
         loadMainProgram()
@@ -325,17 +355,40 @@ if interrupt == false then -- Continue booting
         until attempt > 3
         if attempt > 3 then os.shutdown() end
     end
-else -- Interrupt booting
-    print("Interrupted!")
+elseif interrupt == 1 then -- Interrupt booting, enter settings
+    resetTerminal()
     if SETTINGS["ADMIN_PASSWORD"] == "" then
         loadInterruptSettings()
     else
+        print("Interrupted!")
+        print("To change settings, log in below...")
         local attempt = 1
         repeat
             write("Enter admin password > ")
             local psw = read("*")
             if psw == SETTINGS["ADMIN_PASSWORD"] then
                 loadInterruptSettings()
+                break
+            else
+                print("Incorrect password")
+                attempt = attempt + 1
+            end
+        until attempt > 3
+        if attempt > 3 then os.shutdown() end
+    end
+elseif interrupt == 2 then -- Interrupt booting, enter startup program change
+    resetTerminal()
+    if SETTINGS["ADMIN_PASSWORD"] == "" then
+        loadChangeStartupSettings()
+    else
+        print("Interrupted!")
+        print("To change startup program, log in below...")
+        local attempt = 1
+        repeat
+            write("Enter admin password > ")
+            local psw = read("*")
+            if psw == SETTINGS["ADMIN_PASSWORD"] then
+                loadChangeStartupSettings()
                 break
             else
                 print("Incorrect password")
@@ -361,4 +414,4 @@ elseif SETTINGS["END_OF_SEQUENCE"] == "wait" then
     end
 end
 print("End of sequence! Terminating...")
--- terminate no need
+-- Terminate at script exit
