@@ -1,7 +1,7 @@
 -- MIT License
 -- Copyright (c) 2026 frogIsDeveloping
 
--- Bootloader v1.2.0-beta
+-- Bootloader v1.2.1-beta
 
 local interrupt = 0
 local SETTINGS = {}
@@ -61,7 +61,7 @@ loadSettings()
 local function bootTimer()
     for i=tonumber(SETTINGS["BOOT_TIME"]),1,-1 do
         resetTerminal()
-        print("BOOTLOADER v1.2.0-beta") -- version
+        print("BOOTLOADER v1.2.1-beta") -- version
         print("")
         print("Booting in "..i.."...")
         print("Strike F3 key to interrupt boot")
@@ -187,14 +187,16 @@ local function loadChangeStartupSettings()
     print("Listing available startup programs:")
     print("Changing the startup program will save it as new default !")
     print("")
-    local files = fs.list(SETTINGS["PROGRAM_FOLDER"])
     local availableStartupFiles = {}
-    for i=1,#files do
-        if files[i]:match("%.lua$") then
-            availableStartupFiles[#availableStartupFiles+1] = files[i]
-            print(#availableStartupFiles.." :: "..files[i])
+    pcall(function()
+        local files = fs.list(SETTINGS["PROGRAM_FOLDER"])
+        for i=1,#files do
+            if files[i]:match("%.lua$") then
+                availableStartupFiles[#availableStartupFiles+1] = files[i]
+                print(#availableStartupFiles.." :: "..files[i])
+            end
         end
-    end
+    end)
     print("")
     print("Press Enter to abort")
     write("Select program by number > ")
