@@ -21,7 +21,8 @@ Changing boot program
 ## Installation & setup
 ###### To install the bootloader 
 `wget https://raw.githubusercontent.com/frogIsDeveloping/computercraft_bootloader-autoupdater/refs/heads/latest/computer-example/startup.lua`  
-Latest is just a mirror of main whenever a release is out.  
+  
+(latest is just a mirror of main whenever a release is out)  
 Other releases are available on the [Releases](https://github.com/frogIsDeveloping/computercraft_bootloader-autoupdater/releases) page.
 
 ###### To set up auto-update
