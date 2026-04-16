@@ -8,11 +8,14 @@ It's also possible to use it to initiate many computers, as the files to autoupd
 
 ## Images
 On computer boot  
-<img width="723" height="419" alt="2026-04-14_22-39-32" src="https://github.com/user-attachments/assets/5ee52fcf-8e97-4348-98aa-d0a1652cc0c2" />
+<img width="697" height="416" alt="2026-04-15_21-33-36" src="https://github.com/user-attachments/assets/7c2ca39f-e280-4e40-bb77-b107fd30a10b" />
 
-
-Settings/boot interrupt interface  
+Interrupt (settings) interface  
 <img width="717" height="413" alt="2026-04-14_22-40-29" src="https://github.com/user-attachments/assets/a954439e-532b-4351-ba54-e4e6a941543f" />
+
+Changing boot program  
+<img width="710" height="421" alt="2026-04-15_21-30-42" src="https://github.com/user-attachments/assets/8d554260-6fbf-4ecd-bea7-3a80f0c0695f" />
+
 
 
 ## Installation & setup
