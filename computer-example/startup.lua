@@ -185,6 +185,7 @@ end
 local function loadChangeStartupSettings()
     resetTerminal()
     print("Listing available startup programs:")
+    print("Changing the startup program will save it as new default !")
     print("")
     local files = fs.list(SETTINGS["PROGRAM_FOLDER"])
     local availableStartupFiles = {}
