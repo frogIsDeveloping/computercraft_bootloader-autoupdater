@@ -195,6 +195,7 @@ local function loadChangeStartupSettings()
         end
     end
     print("")
+    print("Press Enter to abort")
     write("Select program by number > ")
     local ans = tonumber(read())
     if availableStartupFiles[ans] then
@@ -203,7 +204,7 @@ local function loadChangeStartupSettings()
         os.sleep(1)
         os.reboot()
     else
-        print("Invalid option!")
+        print("Invalid option! Aborting..")
         os.sleep(5)
         os.reboot()
     end
