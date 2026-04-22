@@ -1,7 +1,7 @@
 -- MIT License
 -- Copyright (c) 2026 frogIsDeveloping
 
--- Bootloader v1.2.2-beta
+-- Bootloader v1.3.0-alpha
 
 local interrupt = 0
 local SETTINGS = {}
@@ -82,28 +82,59 @@ local function keyInterrupt()
 end
 
 local function updateSettings()
-    local file = fs.open("SETTINGS-BACKUP.txt","r")
-    if file then
-        file.close()
-        shell.run("rm SETTINGS-BACKUP.txt")
+    print("Updating settings...")
+
+    if fs.exists("SETTINGS-BACKUP.txt") == true then
+        pcall(function()
+            fs.delete("SETTINGS-BACKUP.txt")
+            -- not sure in what case it'd throw but pcall
+        end)
     end
-    shell.run("copy SETTINGS.txt SETTINGS-BACKUP.txt")
-    local success,err = pcall(function()
-        file = fs.open("SETTINGS.txt","w")
-        file.write(textutils.serialise(SETTINGS,{compact=true}))
-        file.close()
+
+    local success, err = pcall(function()
+        fs.copy("SETTINGS.txt","SETTINGS-BACKUP.txt")
     end)
     if success == true then
-        shell.run("rm SETTINGS-BACKUP.txt")
-        print("Operation completed")
-        os.sleep(1)
+
+        success, err = pcall(function()
+            local file = fs.open("SETTINGS.txt","w")
+            file.write(textutils.serialise(SETTINGS,{compact=true}))
+            file.close()
+        end)
+        if success == true then
+            pcall(function()
+                fs.delete("SETTINGS-BACKUP.txt")
+            end)
+            print("Settings updated successfully")
+            os.sleep(1)
+        else
+            print("FAILED: Could not write to settings: ",err)
+            pcall(function()
+                fs.delete("SETTINGS.txt")
+            end)
+            local success2, err2 = pcall(function()
+                fs.copy("SETTINGS-BACKUP.txt","SETTINGS.txt")
+            end)
+            if success == true then
+                pcall(function()
+                    fs.delete("SETTINGS-BACKUP.txt")
+                end)
+                print("A backup of settings was restored successfully.")
+            else
+                print("FAIL #2: Could not restore settings backup: ",err2)
+                print("WARNING: Settings may have corrupted")
+                os.sleep(15)
+                os.shutdown()
+            end
+            os.sleep(10)
+            os.shutdown()
+        end
     else
-        shell.run("rm SETTINGS.txt")
-        shell.run("copy SETTINGS-BACKUP.txt SETTINGS.txt")
-        shell.run("rm SETTINGS-BACKUP.txt")
-        print("Operation failed: "..err)
-        os.sleep(5)
+        print("FAILED: Could not create backup:",err)
+        os.sleep(10)
+        os.shutdown()
     end
+    -- We shutdown in case of an error otherwise the new settings will only be temporary and this will mislead the user
 end
 
 local function loadInterruptSettings()
