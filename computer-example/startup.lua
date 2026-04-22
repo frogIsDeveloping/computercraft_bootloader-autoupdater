@@ -112,7 +112,7 @@ local function updateSettings()
             pcall(function()
                 fs.delete("SETTINGS.txt")
             end)
-            local success2, err2 = pcall(function()
+            success, err = pcall(function()
                 fs.copy("SETTINGS-BACKUP.txt","SETTINGS.txt")
             end)
             if success == true then
@@ -121,16 +121,17 @@ local function updateSettings()
                 end)
                 print("A backup of settings was restored successfully.")
             else
-                print("FAIL #2: Could not restore settings backup: ",err2)
+                print("FAIL #2: Could not restore settings backup: ",err)
                 print("WARNING: Settings may have corrupted")
-                os.sleep(5)
             end
-            os.sleep(10)
+            print("PRESS ENTER TO CONTINUE.")
+            read()
             os.shutdown()
         end
     else
         print("FAILED: Could not create backup:",err)
-        os.sleep(10)
+        print("PRESS ENTER TO CONTINUE.")
+        read()
         os.shutdown()
     end
     -- We shutdown in case of an error otherwise the new settings will only be temporary and this will mislead the user
@@ -245,40 +246,61 @@ end
 
 local function doUpdate(newBuild,fileList)
     -- Do a backup
-    print("-- IGNORE TEXT BELOW --")
-    shell.run("rm "..SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
-    shell.run("copy "..SETTINGS["PROGRAM_FOLDER"].." "..SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
+    if fs.exists(SETTINGS["PROGRAM_FOLDER"].."-BACKUP") == true then
+        pcall(function()
+            fs.delete(SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
+        end)
+    end
     local success,err = pcall(function()
-        local file = nil
-        for i=1,#fileList do
-            shell.run("rm "..SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i])
-            shell.run("wget "..SETTINGS["UPDATE_CHANNEL"]:match("^(.+)buildNumber%.txt$")..fileList[i].." "..SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i])
-            file = fs.open(SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i],"r")
-            if file then
-                -- all good!
-                file.close()
-            else
-                -- The file did not download (no internet?)
-                error("File download failed!")
-            end
-        end
+        fs.copy(SETTINGS["PROGRAM_FOLDER"],SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
     end)
     if success == true then
-        shell.run("rm "..SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
-        print("------------------")
-        SETTINGS["CURRENT_BUILD_NUMBER"] = newBuild
-        updateSettings()
+        success,err = pcall(function()
+            for i=1,#fileList do
+                fs.delete(SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i])
+                print("Downloading",fileList[i])
+                shell.run("wget "..SETTINGS["UPDATE_CHANNEL"]:match("^(.+)buildNumber%.txt$")..fileList[i].." "..SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i])
+                if fs.exists(SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i]) == false then
+                    -- The file did not download (no internet?)
+                    error("File download failed!")
+                end
+                os.sleep(1)
+                print("Downloaded",fileList[i])
+            end
+        end)
+        if success == true then
+            pcall(function()
+                fs.delete(SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
+            end)
+            print("------------------")
+            SETTINGS["CURRENT_BUILD_NUMBER"] = newBuild
+            updateSettings()
 
-        print("Update successful !")
-        os.sleep(1)
+            print("Update successful !")
+            os.sleep(2)
+        else
+            -- Restore backup
+            print("------------------")
+            print("UPDATE FAILED: "..err)
+            print("Restoring old files from backup")
+            success, err = pcall(function()
+                fs.delete(SETTINGS["PROGRAM_FOLDER"])
+                fs.copy(SETTINGS["PROGRAM_FOLDER"].."-BACKUP",SETTINGS["PROGRAM_FOLDER"])
+                fs.delete(SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
+            end)
+            if success == true then
+                print("Backup successfully restored. Files not updated.")
+            else
+                print("WARNING: COULD NOT RESTORE BACKUP. Files may be lost.",err)
+            end
+            print("PRESS ENTER TO CONTINUE.")
+            read()
+        end
     else
-        -- Restore backup
-        shell.run("rm "..SETTINGS["PROGRAM_FOLDER"])
-        shell.run("copy "..SETTINGS["PROGRAM_FOLDER"].."-BACKUP "..SETTINGS["PROGRAM_FOLDER"])
-        shell.run("rm "..SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
         print("------------------")
-        print("UPDATE FAILED: "..err)
-        os.sleep(5)
+        print("UPDATE FAILED: Could not create backup before update:",err)
+        print("PRESS ENTER TO CONTINUE.")
+        read()
     end
 end
 
