@@ -61,7 +61,7 @@ loadSettings()
 local function bootTimer()
     for i=tonumber(SETTINGS["BOOT_TIME"]),1,-1 do
         resetTerminal()
-        print("BOOTLOADER v1.2.2-beta") -- version
+        print("BOOTLOADER v1.3.0-alpha") -- version
         print("")
         print("Booting in "..i.."...")
         print("Strike F3 key to interrupt boot")
