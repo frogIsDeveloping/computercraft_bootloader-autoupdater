@@ -123,8 +123,7 @@ local function updateSettings()
             else
                 print("FAIL #2: Could not restore settings backup: ",err2)
                 print("WARNING: Settings may have corrupted")
-                os.sleep(15)
-                os.shutdown()
+                os.sleep(5)
             end
             os.sleep(10)
             os.shutdown()
