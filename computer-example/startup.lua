@@ -314,17 +314,15 @@ local function loadMainProgram()
     else
         print("Checking for updates...")
         local success,err = pcall(function()
-            local file = fs.open("buildNumber.txt","r")
-            if file then
-                file.close()
-                shell.run("rm buildNumber.txt")
+            if fs.exists("buildNumber.txt") == true then
+               pcall(function() fs.delete("buildNumber.txt") end) 
             end
             shell.run("wget "..SETTINGS["UPDATE_CHANNEL"].." buildNumber.txt")
             file = fs.open("buildNumber.txt","r")
             if file then
                 local buildNumber = textutils.unserialise(file.readAll())
                 file.close()
-                shell.run("rm buildNumber.txt")
+                pcall(function() fs.delete("buildNumber.txt") end) 
                 if buildNumber[1] > SETTINGS["CURRENT_BUILD_NUMBER"] then
                     resetTerminal()
                     print("")
@@ -342,7 +340,7 @@ local function loadMainProgram()
                         local canExit = true
                         local function timeOut()
                             os.sleep(tonumber(SETTINGS["MANUAL_UPDATE_TIME"]))
-                            if canExit == false then -- if update takes more than 10 seconds, this will prevent exit and won't run program
+                            if canExit == false then -- if update takes more than MANUAL_UPDATE_TIME seconds, this will prevent exit and won't run program
                                 while true do
                                     os.sleep(10) -- just wait forever, once watchUpdate is done this will stop because of the waitForAny
                                 end
