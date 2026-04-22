@@ -149,7 +149,7 @@ local function loadInterruptSettings()
         end
         print("")
         print("Enter setting to change, 'quit' or 'terminate' > ")
-        local input = read()
+        local input = string.upper(read())
         if SETTINGS[input] ~= nil and input ~= "LOADED" and input ~= "CURRENT_BUILD_NUMBER" then -- edit a setting
             write("Changing "..input.." enter new value > ")
             local input2 = read():gsub(" ","") -- remove blank spaces
@@ -415,7 +415,7 @@ elseif interrupt == 1 then -- Interrupt booting, enter settings
         loadInterruptSettings()
     else
         print("Interrupted!")
-        print("To change settings, log in below...")
+        print("To change SETTINGS, log in below...")
         local attempt = 1
         repeat
             write("Enter admin password > ")
@@ -436,7 +436,7 @@ elseif interrupt == 2 then -- Interrupt booting, enter startup program change
         loadChangeStartupSettings()
     else
         print("Interrupted!")
-        print("To change startup program, log in below...")
+        print("To change STARTUP PROGRAM, log in below...")
         local attempt = 1
         repeat
             write("Enter admin password > ")
