@@ -1,7 +1,7 @@
 -- MIT License
 -- Copyright (c) 2026 frogIsDeveloping
 
--- Bootloader v1.2.2-beta
+-- Bootloader v1.3.0-alpha
 
 local interrupt = 0
 local SETTINGS = {}
@@ -61,7 +61,7 @@ loadSettings()
 local function bootTimer()
     for i=tonumber(SETTINGS["BOOT_TIME"]),1,-1 do
         resetTerminal()
-        print("BOOTLOADER v1.2.2-beta") -- version
+        print("BOOTLOADER v1.3.0-alpha") -- version
         print("")
         print("Booting in "..i.."...")
         print("Strike F3 key to interrupt boot")
@@ -82,28 +82,59 @@ local function keyInterrupt()
 end
 
 local function updateSettings()
-    local file = fs.open("SETTINGS-BACKUP.txt","r")
-    if file then
-        file.close()
-        shell.run("rm SETTINGS-BACKUP.txt")
+    print("Updating settings...")
+
+    if fs.exists("SETTINGS-BACKUP.txt") == true then
+        pcall(function()
+            fs.delete("SETTINGS-BACKUP.txt")
+            -- not sure in what case it'd throw but pcall
+        end)
     end
-    shell.run("copy SETTINGS.txt SETTINGS-BACKUP.txt")
-    local success,err = pcall(function()
-        file = fs.open("SETTINGS.txt","w")
-        file.write(textutils.serialise(SETTINGS,{compact=true}))
-        file.close()
+
+    local success, err = pcall(function()
+        fs.copy("SETTINGS.txt","SETTINGS-BACKUP.txt")
     end)
     if success == true then
-        shell.run("rm SETTINGS-BACKUP.txt")
-        print("Operation completed")
-        os.sleep(1)
+
+        success, err = pcall(function()
+            local file = fs.open("SETTINGS.txt","w")
+            file.write(textutils.serialise(SETTINGS,{compact=true}))
+            file.close()
+        end)
+        if success == true then
+            pcall(function()
+                fs.delete("SETTINGS-BACKUP.txt")
+            end)
+            print("Settings updated successfully")
+            os.sleep(1)
+        else
+            print("FAILED: Could not write to settings: ",err)
+            pcall(function()
+                fs.delete("SETTINGS.txt")
+            end)
+            success, err = pcall(function()
+                fs.copy("SETTINGS-BACKUP.txt","SETTINGS.txt")
+            end)
+            if success == true then
+                pcall(function()
+                    fs.delete("SETTINGS-BACKUP.txt")
+                end)
+                print("A backup of settings was restored successfully.")
+            else
+                print("FAIL #2: Could not restore settings backup: ",err)
+                print("WARNING: Settings may have corrupted")
+            end
+            print("PRESS ENTER TO CONTINUE.")
+            read()
+            os.shutdown()
+        end
     else
-        shell.run("rm SETTINGS.txt")
-        shell.run("copy SETTINGS-BACKUP.txt SETTINGS.txt")
-        shell.run("rm SETTINGS-BACKUP.txt")
-        print("Operation failed: "..err)
-        os.sleep(5)
+        print("FAILED: Could not create backup:",err)
+        print("PRESS ENTER TO CONTINUE.")
+        read()
+        os.shutdown()
     end
+    -- We shutdown in case of an error otherwise the new settings will only be temporary and this will mislead the user
 end
 
 local function loadInterruptSettings()
@@ -118,7 +149,7 @@ local function loadInterruptSettings()
         end
         print("")
         print("Enter setting to change, 'quit' or 'terminate' > ")
-        local input = read()
+        local input = string.upper(read())
         if SETTINGS[input] ~= nil and input ~= "LOADED" and input ~= "CURRENT_BUILD_NUMBER" then -- edit a setting
             write("Changing "..input.." enter new value > ")
             local input2 = read():gsub(" ","") -- remove blank spaces
@@ -215,40 +246,61 @@ end
 
 local function doUpdate(newBuild,fileList)
     -- Do a backup
-    print("-- IGNORE TEXT BELOW --")
-    shell.run("rm "..SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
-    shell.run("copy "..SETTINGS["PROGRAM_FOLDER"].." "..SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
+    if fs.exists(SETTINGS["PROGRAM_FOLDER"].."-BACKUP") == true then
+        pcall(function()
+            fs.delete(SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
+        end)
+    end
     local success,err = pcall(function()
-        local file = nil
-        for i=1,#fileList do
-            shell.run("rm "..SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i])
-            shell.run("wget "..SETTINGS["UPDATE_CHANNEL"]:match("^(.+)buildNumber%.txt$")..fileList[i].." "..SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i])
-            file = fs.open(SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i],"r")
-            if file then
-                -- all good!
-                file.close()
-            else
-                -- The file did not download (no internet?)
-                error("File download failed!")
-            end
-        end
+        fs.copy(SETTINGS["PROGRAM_FOLDER"],SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
     end)
     if success == true then
-        shell.run("rm "..SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
-        print("------------------")
-        SETTINGS["CURRENT_BUILD_NUMBER"] = newBuild
-        updateSettings()
+        success,err = pcall(function()
+            for i=1,#fileList do
+                fs.delete(SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i])
+                print("Downloading",fileList[i])
+                shell.run("wget "..SETTINGS["UPDATE_CHANNEL"]:match("^(.+)buildNumber%.txt$")..fileList[i].." "..SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i])
+                if fs.exists(SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i]) == false then
+                    -- The file did not download (no internet?)
+                    error("File download failed!")
+                end
+                os.sleep(1)
+                print("Downloaded",fileList[i])
+            end
+        end)
+        if success == true then
+            pcall(function()
+                fs.delete(SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
+            end)
+            print("------------------")
+            SETTINGS["CURRENT_BUILD_NUMBER"] = newBuild
+            updateSettings()
 
-        print("Update successful !")
-        os.sleep(1)
+            print("Update successful !")
+            os.sleep(2)
+        else
+            -- Restore backup
+            print("------------------")
+            print("UPDATE FAILED: "..err)
+            print("Restoring old files from backup")
+            success, err = pcall(function()
+                fs.delete(SETTINGS["PROGRAM_FOLDER"])
+                fs.copy(SETTINGS["PROGRAM_FOLDER"].."-BACKUP",SETTINGS["PROGRAM_FOLDER"])
+                fs.delete(SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
+            end)
+            if success == true then
+                print("Backup successfully restored. Files not updated.")
+            else
+                print("WARNING: COULD NOT RESTORE BACKUP. Files may be lost.",err)
+            end
+            print("PRESS ENTER TO CONTINUE.")
+            read()
+        end
     else
-        -- Restore backup
-        shell.run("rm "..SETTINGS["PROGRAM_FOLDER"])
-        shell.run("copy "..SETTINGS["PROGRAM_FOLDER"].."-BACKUP "..SETTINGS["PROGRAM_FOLDER"])
-        shell.run("rm "..SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
         print("------------------")
-        print("UPDATE FAILED: "..err)
-        os.sleep(5)
+        print("UPDATE FAILED: Could not create backup before update:",err)
+        print("PRESS ENTER TO CONTINUE.")
+        read()
     end
 end
 
@@ -262,17 +314,15 @@ local function loadMainProgram()
     else
         print("Checking for updates...")
         local success,err = pcall(function()
-            local file = fs.open("buildNumber.txt","r")
-            if file then
-                file.close()
-                shell.run("rm buildNumber.txt")
+            if fs.exists("buildNumber.txt") == true then
+               pcall(function() fs.delete("buildNumber.txt") end) 
             end
             shell.run("wget "..SETTINGS["UPDATE_CHANNEL"].." buildNumber.txt")
             file = fs.open("buildNumber.txt","r")
             if file then
                 local buildNumber = textutils.unserialise(file.readAll())
                 file.close()
-                shell.run("rm buildNumber.txt")
+                pcall(function() fs.delete("buildNumber.txt") end) 
                 if buildNumber[1] > SETTINGS["CURRENT_BUILD_NUMBER"] then
                     resetTerminal()
                     print("")
@@ -290,7 +340,7 @@ local function loadMainProgram()
                         local canExit = true
                         local function timeOut()
                             os.sleep(tonumber(SETTINGS["MANUAL_UPDATE_TIME"]))
-                            if canExit == false then -- if update takes more than 10 seconds, this will prevent exit and won't run program
+                            if canExit == false then -- if update takes more than MANUAL_UPDATE_TIME seconds, this will prevent exit and won't run program
                                 while true do
                                     os.sleep(10) -- just wait forever, once watchUpdate is done this will stop because of the waitForAny
                                 end
@@ -365,7 +415,7 @@ elseif interrupt == 1 then -- Interrupt booting, enter settings
         loadInterruptSettings()
     else
         print("Interrupted!")
-        print("To change settings, log in below...")
+        print("To change SETTINGS, log in below...")
         local attempt = 1
         repeat
             write("Enter admin password > ")
@@ -386,7 +436,7 @@ elseif interrupt == 2 then -- Interrupt booting, enter startup program change
         loadChangeStartupSettings()
     else
         print("Interrupted!")
-        print("To change startup program, log in below...")
+        print("To change STARTUP PROGRAM, log in below...")
         local attempt = 1
         repeat
             write("Enter admin password > ")
