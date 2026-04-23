@@ -5,6 +5,7 @@
 
 local interrupt = 0
 local SETTINGS = {}
+local HTTP_HEADERS = {}
 
 local _pullEvent = os.pullEvent -- for later restore (if needed)
 os.pullEvent = os.pullEventRaw
@@ -28,10 +29,15 @@ local function loadSettings()
                 error("SETTINGS FILE CORRUPTED")
             end
             file.close()
+
+            if SETTINGS["TOKEN_FOR_PRIVATE_REPO"] ~= "" then -- private repo support
+                HTTP_HEADERS["Authorization"] = "Bearer "..SETTINGS["TOKEN_FOR_PRIVATE_REPO"]
+            end
         else
             -- Default settings
             SETTINGS["UPDATE_CHANNEL"] = "https://raw.githubusercontent.com/frogIsDeveloping/computercraft_bootloader-autoupdater/refs/heads/latest/auto-update_example/buildNumber.txt"
             SETTINGS["AUTO_UPDATE"] = "false"
+            SETTINGS["TOKEN_FOR_PRIVATE_REPO"] = ""
 
             SETTINGS["BOOT_TIME"] = "5"
             SETTINGS["MANUAL_UPDATE_TIME"] = "10"
@@ -151,7 +157,7 @@ local function loadInterruptSettings()
         print("Enter setting to change, 'quit' or 'terminate' > ")
         local input = string.upper(read())
         if SETTINGS[input] ~= nil and input ~= "LOADED" and input ~= "CURRENT_BUILD_NUMBER" then -- edit a setting
-            write("Changing "..input.." enter new value > ")
+            print("Changing "..input.." enter new value:")
             local input2 = read():gsub(" ","") -- remove blank spaces
             write("Change from "..SETTINGS[input].." to "..input2.." ? (Y/N) > ")
             local input3 = read()
@@ -176,6 +182,11 @@ local function loadInterruptSettings()
                     if input2:match("buildNumber%.txt$") == nil and input2 ~= "" then
                         failsafe = true
                         print("WARNING: Update channel must end with buildNumber.txt!")
+                    end
+                elseif input == "TOKEN_FOR_PRIVATE_REPO" then
+                    if string.sub(input2,1,11) ~= "github_pat_" and input2 ~= "" then
+                        failsafe = true
+                        print("WARNING: Token should start with github_pat_")
                     end
                 elseif input == "AUTO_UPDATE" or input == "RESTORE_PULLEVENT" then
                     if input2 ~= "true" and input2 ~= "false" then
@@ -259,10 +270,14 @@ local function doUpdate(newBuild,fileList)
             for i=1,#fileList do
                 fs.delete(SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i])
                 print("Downloading",fileList[i])
-                shell.run("wget "..SETTINGS["UPDATE_CHANNEL"]:match("^(.+)buildNumber%.txt$")..fileList[i].." "..SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i])
-                if fs.exists(SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i]) == false then
-                    -- The file did not download (no internet?)
-                    error("File download failed!")
+                local response,http_error = http.get(SETTINGS["UPDATE_CHANNEL"]:match("^(.+)buildNumber%.txt$")..fileList[i],HTTP_HEADERS)
+                if response ~= nil then
+                    local file = fs.open(SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i],"w")
+                    file.write(response.readAll())
+                    file.close()
+                    response.close()
+                else
+                    error("File download failed: "..http_error)
                 end
                 os.sleep(1)
                 print("Downloaded",fileList[i])
@@ -314,18 +329,12 @@ local function loadMainProgram()
     else
         print("Checking for updates...")
         local success,err = pcall(function()
-            if fs.exists("buildNumber.txt") == true then
-               pcall(function() fs.delete("buildNumber.txt") end) 
-            end
-            shell.run("wget "..SETTINGS["UPDATE_CHANNEL"].." buildNumber.txt")
-            file = fs.open("buildNumber.txt","r")
-            if file then
-                local buildNumber = textutils.unserialise(file.readAll())
-                file.close()
-                pcall(function() fs.delete("buildNumber.txt") end) 
+            local response,http_error = http.get(SETTINGS["UPDATE_CHANNEL"],HTTP_HEADERS)
+            if response ~= nil then
+                local buildNumber = textutils.unserialise(response.readAll())
+                response.close()
                 if buildNumber[1] > SETTINGS["CURRENT_BUILD_NUMBER"] then
                     resetTerminal()
-                    print("")
                     print("An update is available!")
                     print("Newest build number: "..buildNumber[1])
                     print("Current build number: "..SETTINGS["CURRENT_BUILD_NUMBER"].." ["..buildNumber[1]-SETTINGS["CURRENT_BUILD_NUMBER"].." version(s) behind]")
@@ -369,7 +378,8 @@ local function loadMainProgram()
                     os.sleep(0.5)
                 end
             else
-                error("Unable to check for update! Is UPDATE_CHANNEL set correctly? Set to nothing to disable update check.")
+                print("ATTENTION: Is buildnumber.txt malformed?")
+                error("Unable to check for update: "..http_error)
             end
         end)
         if success == true then
