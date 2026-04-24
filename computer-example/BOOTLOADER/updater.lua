@@ -80,12 +80,12 @@ function Updater.checkAndRun(_pullEvent)
                         doUpdate(buildNumber[1],buildNumber[2])
                     else
                         print("Auto-update disabled!")
-                        print("Out-of-date program will load in "..Config.data["MANUAL_UPDATE_TIME"].." seconds")
+                        print("Out-of-date program will load in 10 seconds")
                         write("Update? (Y/N) > ")
                         local canExit = true
                         local function timeOut()
-                            os.sleep(tonumber(Config.data["MANUAL_UPDATE_TIME"]))
-                            if canExit == false then -- if update takes more than MANUAL_UPDATE_TIME seconds, this will prevent exit and won't run program
+                            os.sleep(10)
+                            if canExit == false then -- if update takes more than 10 seconds, this will prevent exit and won't run program
                                 while true do
                                     os.sleep(10) -- just wait forever, once watchUpdate is done this will stop because of the waitForAny
                                 end

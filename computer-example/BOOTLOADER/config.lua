@@ -13,8 +13,7 @@ local DEFAULT_CONFIG = {
     ["AUTO_UPDATE"] = "false";
     ["TOKEN_FOR_PRIVATE_REPO"] = "";
 
-    ["BOOT_TIME"] = "5";
-    ["MANUAL_UPDATE_TIME"] = "10";
+    ["BOOT_TIME"] = "2";
     ["PROGRAM_FOLDER"] = "src";
     ["STARTUP_PROGRAM"] = "startup.lua";
     ["USER_PASSWORD"] = "";
