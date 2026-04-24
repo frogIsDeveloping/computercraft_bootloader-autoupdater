@@ -1,11 +1,7 @@
 -- MIT License
 -- Copyright (c) 2026 frogIsDeveloping
 
--- Bootloader v1.3.0-beta
-
-local interrupt = 0
-local SETTINGS = {}
-local HTTP_HEADERS = {}
+-- Bootloader v2.0.0-alpha
 
 local _pullEvent = os.pullEvent -- for later restore (if needed)
 os.pullEvent = os.pullEventRaw
@@ -18,71 +14,21 @@ local function resetTerminal()
     term.clear()
     term.setCursorPos(1,1)
 end
+resetTerminal()
 
--- load settings
-local DEFAULT_SETTINGS = {
-    ["UPDATE_CHANNEL"] = "https://raw.githubusercontent.com/frogIsDeveloping/computercraft_bootloader-autoupdater/refs/heads/latest/auto-update_example/buildNumber.txt";
-    ["AUTO_UPDATE"] = "false";
-    ["TOKEN_FOR_PRIVATE_REPO"] = "";
+local interrupt = 0
 
-    ["BOOT_TIME"] = "5";
-    ["MANUAL_UPDATE_TIME"] = "10";
-    ["PROGRAM_FOLDER"] = "src";
-    ["STARTUP_PROGRAM"] = "startup.lua";
-    ["USER_PASSWORD"] = "";
-    ["ADMIN_PASSWORD"] = "";
-    ["END_OF_SEQUENCE"] = "shutdown";
-    ["RESTORE_PULLEVENT"] = "false";
+local Config = require("BOOTLOADER/config")
 
-    ["LOADED"] = 1;
-    ["CURRENT_BUILD_NUMBER"] = 0;
-}
-local function loadSettings()
-    local success, err = pcall(function()
-        local file = fs.open("SETTINGS.txt","r")
-        local missingSetting = false
-        if file then
-            SETTINGS = textutils.unserialise(file.readAll())
-            file.close()
-
-            if SETTINGS["LOADED"] ~= 1 then
-                error("SETTINGS FILE CORRUPTED")
-            end
-
-            -- if something is missing, add it
-            for i in pairs(DEFAULT_SETTINGS) do
-                if SETTINGS[i] == nil then
-                    SETTINGS[i] = DEFAULT_SETTINGS[i]
-                    missingSetting = true
-                end
-            end
-
-            if SETTINGS["TOKEN_FOR_PRIVATE_REPO"] ~= "" then -- private repo support
-                HTTP_HEADERS["Authorization"] = "Bearer "..SETTINGS["TOKEN_FOR_PRIVATE_REPO"]
-            end
-        else
-            for i in pairs(DEFAULT_SETTINGS) do
-                SETTINGS[i] = DEFAULT_SETTINGS[i]
-            end
-            missingSetting = true
-        end
-
-        if missingSetting == true then
-            file = fs.open("SETTINGS.txt","w")
-            file.write(textutils.serialise(SETTINGS,{compact=true}))
-            file.close()
-        end
-    end)
-    if success == false then
-        error("BOOTLOADER CRASH: SETTINGS CORRUPTED: "..err)
-    end
+local Config_loadSuccess, Config_loadError = Config.load()
+if not Config_loadSuccess then
+    error("Error while loading bootloader config: "..Config_loadError)
 end
-loadSettings()
 
 local function bootTimer()
-    for i=tonumber(SETTINGS["BOOT_TIME"]),1,-1 do
+    for i=tonumber(Config.data["BOOT_TIME"]),1,-1 do
         resetTerminal()
-        print("BOOTLOADER v1.3.0-beta") -- version
+        print("BOOTLOADER v2.0.0-alpha") -- version
         print("")
         print("Booting in "..i.."...")
         print("Strike F3 key to interrupt boot")
@@ -102,77 +48,21 @@ local function keyInterrupt()
     until interrupt > 0
 end
 
-local function updateSettings()
-    print("Updating settings...")
-
-    if fs.exists("SETTINGS-BACKUP.txt") == true then
-        pcall(function()
-            fs.delete("SETTINGS-BACKUP.txt")
-            -- not sure in what case it'd throw but pcall
-        end)
-    end
-
-    local success, err = pcall(function()
-        fs.copy("SETTINGS.txt","SETTINGS-BACKUP.txt")
-    end)
-    if success == true then
-
-        success, err = pcall(function()
-            local file = fs.open("SETTINGS.txt","w")
-            file.write(textutils.serialise(SETTINGS,{compact=true}))
-            file.close()
-        end)
-        if success == true then
-            pcall(function()
-                fs.delete("SETTINGS-BACKUP.txt")
-            end)
-            print("Settings updated successfully")
-            os.sleep(1)
-        else
-            print("FAILED: Could not write to settings: ",err)
-            pcall(function()
-                fs.delete("SETTINGS.txt")
-            end)
-            success, err = pcall(function()
-                fs.copy("SETTINGS-BACKUP.txt","SETTINGS.txt")
-            end)
-            if success == true then
-                pcall(function()
-                    fs.delete("SETTINGS-BACKUP.txt")
-                end)
-                print("A backup of settings was restored successfully.")
-            else
-                print("FAIL #2: Could not restore settings backup: ",err)
-                print("WARNING: Settings may have corrupted")
-            end
-            print("PRESS ENTER TO CONTINUE.")
-            read()
-            os.shutdown()
-        end
-    else
-        print("FAILED: Could not create backup:",err)
-        print("PRESS ENTER TO CONTINUE.")
-        read()
-        os.shutdown()
-    end
-    -- We shutdown in case of an error otherwise the new settings will only be temporary and this will mislead the user
-end
-
-local function loadInterruptSettings()
+local function loadInterruptConfig()
     while true do
         resetTerminal()
-        print("Showing settings:")
+        print("Showing config:")
         print("")
 
         local alphaOrder = {}
-        for i in pairs(SETTINGS) do
+        for i in pairs(Config.data) do
             if i ~= "LOADED" and i ~= "CURRENT_BUILD_NUMBER" then
                 alphaOrder[#alphaOrder+1] = i 
             end
         end
         table.sort(alphaOrder)
         for i=1,#alphaOrder do
-            local currentSetting = SETTINGS[alphaOrder[i]]
+            local currentSetting = Config.data[alphaOrder[i]]
 
             if currentSetting ~= "" and (alphaOrder[i] == "ADMIN_PASSWORD" or alphaOrder[i] == "USER_PASSWORD" or alphaOrder[i] == "TOKEN_FOR_PRIVATE_REPO") then
                 currentSetting = "<set>"
@@ -184,10 +74,10 @@ local function loadInterruptSettings()
         print("")
         print("Enter setting to change, 'quit' or 'terminate' > ")
         local input = string.upper(read())
-        if SETTINGS[input] ~= nil and input ~= "LOADED" and input ~= "CURRENT_BUILD_NUMBER" then -- edit a setting
+        if Config.data[input] ~= nil and input ~= "LOADED" and input ~= "CURRENT_BUILD_NUMBER" then -- edit a setting
             print("Changing "..input.." enter new value:")
             local input2 = read():gsub(" ","") -- remove blank spaces
-            write("Change from "..SETTINGS[input].." to "..input2.." ? (Y/N) > ")
+            write("Change from "..Config.data[input].." to "..input2.." ? (Y/N) > ")
             local input3 = read()
             if string.lower(input3) == "y" then
 
@@ -230,8 +120,8 @@ local function loadInterruptSettings()
                 
                 if failsafe == false then
                     -- change setting
-                    SETTINGS[input] = input2
-                    updateSettings()
+                    Config.data[input] = input2
+                    Config.save()
                     
                 else
                     print("Invalid parameters !")
@@ -252,14 +142,14 @@ local function loadInterruptSettings()
     end
 end
 
-local function loadChangeStartupSettings()
+local function loadChangeStartupConfig()
     resetTerminal()
     print("Listing available startup programs:")
     print("Changing the startup program will save it as new default !")
     print("")
     local availableStartupFiles = {}
     pcall(function()
-        local files = fs.list(SETTINGS["PROGRAM_FOLDER"])
+        local files = fs.list(Config.data["PROGRAM_FOLDER"])
         for i=1,#files do
             if files[i]:match("%.lua$") then
                 availableStartupFiles[#availableStartupFiles+1] = files[i]
@@ -272,8 +162,8 @@ local function loadChangeStartupSettings()
     write("Select program by number > ")
     local ans = tonumber(read())
     if availableStartupFiles[ans] then
-        SETTINGS["STARTUP_PROGRAM"] = availableStartupFiles[ans]
-        updateSettings()
+        Config.data["STARTUP_PROGRAM"] = availableStartupFiles[ans]
+        Config.save()
         os.sleep(1)
         os.reboot()
     else
@@ -285,22 +175,22 @@ end
 
 local function doUpdate(newBuild,fileList)
     -- Do a backup
-    if fs.exists(SETTINGS["PROGRAM_FOLDER"].."-BACKUP") == true then
+    if fs.exists(Config.data["PROGRAM_FOLDER"].."-BACKUP") == true then
         pcall(function()
-            fs.delete(SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
+            fs.delete(Config.data["PROGRAM_FOLDER"].."-BACKUP")
         end)
     end
     local success,err = pcall(function()
-        fs.copy(SETTINGS["PROGRAM_FOLDER"],SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
+        fs.copy(Config.data["PROGRAM_FOLDER"],Config.data["PROGRAM_FOLDER"].."-BACKUP")
     end)
     if success == true then
         success,err = pcall(function()
             for i=1,#fileList do
-                fs.delete(SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i])
+                fs.delete(Config.data["PROGRAM_FOLDER"].."/"..fileList[i])
                 print("Downloading",fileList[i])
-                local response,http_error = http.get(SETTINGS["UPDATE_CHANNEL"]:match("^(.+)buildNumber%.txt$")..fileList[i],HTTP_HEADERS)
+                local response,http_error = http.get(Config.data["UPDATE_CHANNEL"]:match("^(.+)buildNumber%.txt$")..fileList[i],Config.http_headers)
                 if response ~= nil then
-                    local file = fs.open(SETTINGS["PROGRAM_FOLDER"].."/"..fileList[i],"w")
+                    local file = fs.open(Config.data["PROGRAM_FOLDER"].."/"..fileList[i],"w")
                     file.write(response.readAll())
                     file.close()
                     response.close()
@@ -313,11 +203,11 @@ local function doUpdate(newBuild,fileList)
         end)
         if success == true then
             pcall(function()
-                fs.delete(SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
+                fs.delete(Config.data["PROGRAM_FOLDER"].."-BACKUP")
             end)
             print("------------------")
-            SETTINGS["CURRENT_BUILD_NUMBER"] = newBuild
-            updateSettings()
+            Config.data["CURRENT_BUILD_NUMBER"] = newBuild
+            Config.save()
 
             print("Update successful !")
             os.sleep(2)
@@ -327,9 +217,9 @@ local function doUpdate(newBuild,fileList)
             print("UPDATE FAILED: "..err)
             print("Restoring old files from backup")
             success, err = pcall(function()
-                fs.delete(SETTINGS["PROGRAM_FOLDER"])
-                fs.copy(SETTINGS["PROGRAM_FOLDER"].."-BACKUP",SETTINGS["PROGRAM_FOLDER"])
-                fs.delete(SETTINGS["PROGRAM_FOLDER"].."-BACKUP")
+                fs.delete(Config.data["PROGRAM_FOLDER"])
+                fs.copy(Config.data["PROGRAM_FOLDER"].."-BACKUP",Config.data["PROGRAM_FOLDER"])
+                fs.delete(Config.data["PROGRAM_FOLDER"].."-BACKUP")
             end)
             if success == true then
                 print("Backup successfully restored. Files not updated.")
@@ -349,34 +239,34 @@ end
 
 local function loadMainProgram()
     -- check for updates (if active)
-    if SETTINGS["UPDATE_CHANNEL"] == "" then
-        if SETTINGS["RESTORE_PULLEVENT"] == "true" then
+    if Config.data["UPDATE_CHANNEL"] == "" then
+        if Config.data["RESTORE_PULLEVENT"] == "true" then
             os.pullEvent = _pullEvent
         end
-        shell.run(SETTINGS["PROGRAM_FOLDER"].."/"..SETTINGS["STARTUP_PROGRAM"])
+        shell.run(Config.data["PROGRAM_FOLDER"].."/"..Config.data["STARTUP_PROGRAM"])
     else
         print("Checking for updates...")
         local success,err = pcall(function()
-            local response,http_error = http.get(SETTINGS["UPDATE_CHANNEL"],HTTP_HEADERS)
+            local response,http_error = http.get(Config.data["UPDATE_CHANNEL"],HTTP_HEADERS)
             if response ~= nil then
                 local buildNumber = textutils.unserialise(response.readAll())
                 response.close()
-                if buildNumber[1] > SETTINGS["CURRENT_BUILD_NUMBER"] then
+                if buildNumber[1] > Config.data["CURRENT_BUILD_NUMBER"] then
                     resetTerminal()
                     print("An update is available!")
                     print("Newest build number: "..buildNumber[1])
-                    print("Current build number: "..SETTINGS["CURRENT_BUILD_NUMBER"].." ["..buildNumber[1]-SETTINGS["CURRENT_BUILD_NUMBER"].." version(s) behind]")
+                    print("Current build number: "..Config.data["CURRENT_BUILD_NUMBER"].." ["..buildNumber[1]-Config.data["CURRENT_BUILD_NUMBER"].." version(s) behind]")
                     print("")
-                    if SETTINGS["AUTO_UPDATE"] == "true" then
+                    if Config.data["AUTO_UPDATE"] == "true" then
                         print("Auto-update enabled!")
                         doUpdate(buildNumber[1],buildNumber[2])
                     else
                         print("Auto-update disabled!")
-                        print("Out-of-date program will load in "..SETTINGS["MANUAL_UPDATE_TIME"].." seconds")
+                        print("Out-of-date program will load in "..Config.data["MANUAL_UPDATE_TIME"].." seconds")
                         write("Update? (Y/N) > ")
                         local canExit = true
                         local function timeOut()
-                            os.sleep(tonumber(SETTINGS["MANUAL_UPDATE_TIME"]))
+                            os.sleep(tonumber(Config.data["MANUAL_UPDATE_TIME"]))
                             if canExit == false then -- if update takes more than MANUAL_UPDATE_TIME seconds, this will prevent exit and won't run program
                                 while true do
                                     os.sleep(10) -- just wait forever, once watchUpdate is done this will stop because of the waitForAny
@@ -398,11 +288,11 @@ local function loadMainProgram()
                         parallel.waitForAny(timeOut,watchUpdate)
                         term.setCursorBlink(false)
                         print("")
-                        print("Running build "..SETTINGS["CURRENT_BUILD_NUMBER"])
+                        print("Running build "..Config.data["CURRENT_BUILD_NUMBER"])
                     end
                 else
                     -- Up-to-date
-                    print("Up to date! Running build "..SETTINGS["CURRENT_BUILD_NUMBER"])
+                    print("Up to date! Running build "..Config.data["CURRENT_BUILD_NUMBER"])
                     os.sleep(0.5)
                 end
             else
@@ -410,18 +300,18 @@ local function loadMainProgram()
             end
         end)
         if success == true then
-            if SETTINGS["RESTORE_PULLEVENT"] == "true" then
+            if Config.data["RESTORE_PULLEVENT"] == "true" then
                 os.pullEvent = _pullEvent
             end
-            shell.run(SETTINGS["PROGRAM_FOLDER"].."/"..SETTINGS["STARTUP_PROGRAM"])
+            shell.run(Config.data["PROGRAM_FOLDER"].."/"..Config.data["STARTUP_PROGRAM"])
         else
             print("ATTENTION: Is buildnumber.txt malformed?")
             print("WARNING: CANNOT CHECK FOR UPDATES: "..err)
             os.sleep(5)
-            if SETTINGS["RESTORE_PULLEVENT"] == "true" then
+            if Config.data["RESTORE_PULLEVENT"] == "true" then
                 os.pullEvent = _pullEvent
             end
-            shell.run(SETTINGS["PROGRAM_FOLDER"].."/"..SETTINGS["STARTUP_PROGRAM"])
+            shell.run(Config.data["PROGRAM_FOLDER"].."/"..Config.data["STARTUP_PROGRAM"])
         end
     end
 end
@@ -430,14 +320,14 @@ parallel.waitForAny(bootTimer,keyInterrupt) -- main
 
 if interrupt == 0 then -- Continue booting
     resetTerminal()
-    if SETTINGS["USER_PASSWORD"] == "" then
+    if Config.data["USER_PASSWORD"] == "" then
         loadMainProgram()
     else
         local attempt = 1
         repeat
             write("Enter admin or user password > ")
             local psw = read("*")
-            if psw == SETTINGS["USER_PASSWORD"] or psw == SETTINGS["ADMIN_PASSWORD"] then
+            if psw == Config.data["USER_PASSWORD"] or psw == Config.data["ADMIN_PASSWORD"] then
                 loadMainProgram()
                 break
             else
@@ -447,19 +337,19 @@ if interrupt == 0 then -- Continue booting
         until attempt > 3
         if attempt > 3 then os.shutdown() end
     end
-elseif interrupt == 1 then -- Interrupt booting, enter settings
+elseif interrupt == 1 then -- Interrupt booting, enter config
     resetTerminal()
-    if SETTINGS["ADMIN_PASSWORD"] == "" then
-        loadInterruptSettings()
+    if Config.data["ADMIN_PASSWORD"] == "" then
+        loadInterruptConfig()
     else
         print("Interrupted!")
-        print("To change SETTINGS, log in below...")
+        print("To change CONFIG, log in below...")
         local attempt = 1
         repeat
             write("Enter admin password > ")
             local psw = read("*")
-            if psw == SETTINGS["ADMIN_PASSWORD"] then
-                loadInterruptSettings()
+            if psw == Config.data["ADMIN_PASSWORD"] then
+                loadInterruptConfig()
                 break
             else
                 print("Incorrect password")
@@ -470,8 +360,8 @@ elseif interrupt == 1 then -- Interrupt booting, enter settings
     end
 elseif interrupt == 2 then -- Interrupt booting, enter startup program change
     resetTerminal()
-    if SETTINGS["ADMIN_PASSWORD"] == "" then
-        loadChangeStartupSettings()
+    if Config.data["ADMIN_PASSWORD"] == "" then
+        loadChangeStartupConfig()
     else
         print("Interrupted!")
         print("To change STARTUP PROGRAM, log in below...")
@@ -479,8 +369,8 @@ elseif interrupt == 2 then -- Interrupt booting, enter startup program change
         repeat
             write("Enter admin password > ")
             local psw = read("*")
-            if psw == SETTINGS["ADMIN_PASSWORD"] then
-                loadChangeStartupSettings()
+            if psw == Config.data["ADMIN_PASSWORD"] then
+                loadChangeStartupConfig()
                 break
             else
                 print("Incorrect password")
@@ -491,15 +381,15 @@ elseif interrupt == 2 then -- Interrupt booting, enter startup program change
     end
 end
 
-if SETTINGS["END_OF_SEQUENCE"] == "shutdown" then
+if Config.data["END_OF_SEQUENCE"] == "shutdown" then
     print("End of sequence! Shutting down...")
     os.sleep(5)
     os.shutdown()
-elseif SETTINGS["END_OF_SEQUENCE"] == "reboot" then
+elseif Config.data["END_OF_SEQUENCE"] == "reboot" then
     print("End of sequence! Rebooting...")
     os.sleep(5)
     os.reboot()
-elseif SETTINGS["END_OF_SEQUENCE"] == "wait" then
+elseif Config.data["END_OF_SEQUENCE"] == "wait" then
     print("End of sequence! Waiting...")
     while true do
         os.sleep(10)
