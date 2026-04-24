@@ -1,7 +1,7 @@
 -- MIT License
 -- Copyright (c) 2026 frogIsDeveloping
 
--- Bootloader v1.3.0-alpha
+-- Bootloader v1.3.0-beta
 
 local interrupt = 0
 local SETTINGS = {}
@@ -82,7 +82,7 @@ loadSettings()
 local function bootTimer()
     for i=tonumber(SETTINGS["BOOT_TIME"]),1,-1 do
         resetTerminal()
-        print("BOOTLOADER v1.3.0-alpha") -- version
+        print("BOOTLOADER v1.3.0-beta") -- version
         print("")
         print("Booting in "..i.."...")
         print("Strike F3 key to interrupt boot")
