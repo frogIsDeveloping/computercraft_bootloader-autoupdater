@@ -4,7 +4,7 @@ A custom bootloader made to protect the computer from unauthorized changes (e.g.
 The bootloader itself does not auto-update.  
 It's also possible to use it to initiate many computers, as the files to autoupdate (if any) do not have to be present initially on the computer to be downloaded.  
   
-**DISCLAIMER**: I have created this for my own, amateur use. You are free to use it but it may not fit your exact needs. There is currenty **NO CHECK** for sufficient space on the filesystem when updating. If you use the update feature on a computer that's nearly full, it's possible you lose files.
+**DISCLAIMER**: I have created this for my own, amateur use. You are free to use it but it may not fit your exact needs.
 
 ## Images
 On computer boot  
