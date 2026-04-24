@@ -148,11 +148,24 @@ local function loadInterruptSettings()
         resetTerminal()
         print("Showing settings:")
         print("")
+
+        local alphaOrder = {}
         for i in pairs(SETTINGS) do
             if i ~= "LOADED" and i ~= "CURRENT_BUILD_NUMBER" then
-                print(i.." : "..SETTINGS[i])
+                alphaOrder[#alphaOrder+1] = i 
             end
         end
+        table.sort(alphaOrder)
+        for i=1,#alphaOrder do
+            local currentSetting = SETTINGS[alphaOrder[i]]
+
+            if currentSetting ~= "" and (alphaOrder[i] == "ADMIN_PASSWORD" or alphaOrder[i] == "USER_PASSWORD" or alphaOrder[i] == "TOKEN_FOR_PRIVATE_REPO") then
+                currentSetting = "<set>"
+            end
+
+            print(alphaOrder[i].." : "..currentSetting)
+        end
+
         print("")
         print("Enter setting to change, 'quit' or 'terminate' > ")
         local input = string.upper(read())
