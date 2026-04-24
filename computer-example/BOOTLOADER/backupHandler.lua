@@ -31,7 +31,7 @@ function Backup_Handler.restoreBackup(path) -- do not include the "-BACKUP" in p
         fs.copy(path.."-BACKUP",path)
     end)
     if restoreBackup_success then
-        pcall(function() fs.delete(path.."-BACKUP") end)
+        Backup_Handler.cleanup(path)
         return true
     else
         return false, restoreBackup_error

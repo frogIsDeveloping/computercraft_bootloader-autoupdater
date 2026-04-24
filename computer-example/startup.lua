@@ -1,7 +1,7 @@
 -- MIT License
 -- Copyright (c) 2026 frogIsDeveloping
 
--- Bootloader v2.0.0-alpha
+-- Bootloader v1.3.0-beta
 
 local _pullEvent = os.pullEvent -- for later restore (if needed)
 os.pullEvent = os.pullEventRaw
@@ -19,16 +19,17 @@ resetTerminal()
 local interrupt = 0
 
 local Config = require("BOOTLOADER/config")
-
 local Config_loadSuccess, Config_loadError = Config.load()
 if not Config_loadSuccess then
     error("Error while loading bootloader config: "..Config_loadError)
 end
 
+local Updater = require("BOOTLOADER/updater")
+
 local function bootTimer()
     for i=tonumber(Config.data["BOOT_TIME"]),1,-1 do
         resetTerminal()
-        print("BOOTLOADER v2.0.0-alpha") -- version
+        print("BOOTLOADER v1.3.0-beta") -- version
         print("")
         print("Booting in "..i.."...")
         print("Strike F3 key to interrupt boot")
@@ -173,162 +174,19 @@ local function loadChangeStartupConfig()
     end
 end
 
-local function doUpdate(newBuild,fileList)
-    -- Do a backup
-    if fs.exists(Config.data["PROGRAM_FOLDER"].."-BACKUP") == true then
-        pcall(function()
-            fs.delete(Config.data["PROGRAM_FOLDER"].."-BACKUP")
-        end)
-    end
-    local success,err = pcall(function()
-        fs.copy(Config.data["PROGRAM_FOLDER"],Config.data["PROGRAM_FOLDER"].."-BACKUP")
-    end)
-    if success == true then
-        success,err = pcall(function()
-            for i=1,#fileList do
-                fs.delete(Config.data["PROGRAM_FOLDER"].."/"..fileList[i])
-                print("Downloading",fileList[i])
-                local response,http_error = http.get(Config.data["UPDATE_CHANNEL"]:match("^(.+)buildNumber%.txt$")..fileList[i],Config.http_headers)
-                if response ~= nil then
-                    local file = fs.open(Config.data["PROGRAM_FOLDER"].."/"..fileList[i],"w")
-                    file.write(response.readAll())
-                    file.close()
-                    response.close()
-                else
-                    error("File download failed: "..http_error)
-                end
-                os.sleep(1)
-                print("Downloaded",fileList[i])
-            end
-        end)
-        if success == true then
-            pcall(function()
-                fs.delete(Config.data["PROGRAM_FOLDER"].."-BACKUP")
-            end)
-            print("------------------")
-            Config.data["CURRENT_BUILD_NUMBER"] = newBuild
-            Config.save()
-
-            print("Update successful !")
-            os.sleep(2)
-        else
-            -- Restore backup
-            print("------------------")
-            print("UPDATE FAILED: "..err)
-            print("Restoring old files from backup")
-            success, err = pcall(function()
-                fs.delete(Config.data["PROGRAM_FOLDER"])
-                fs.copy(Config.data["PROGRAM_FOLDER"].."-BACKUP",Config.data["PROGRAM_FOLDER"])
-                fs.delete(Config.data["PROGRAM_FOLDER"].."-BACKUP")
-            end)
-            if success == true then
-                print("Backup successfully restored. Files not updated.")
-            else
-                print("WARNING: COULD NOT RESTORE BACKUP. Files may be lost.",err)
-            end
-            print("PRESS ENTER TO CONTINUE.")
-            read()
-        end
-    else
-        print("------------------")
-        print("UPDATE FAILED: Could not create backup before update:",err)
-        print("PRESS ENTER TO CONTINUE.")
-        read()
-    end
-end
-
-local function loadMainProgram()
-    -- check for updates (if active)
-    if Config.data["UPDATE_CHANNEL"] == "" then
-        if Config.data["RESTORE_PULLEVENT"] == "true" then
-            os.pullEvent = _pullEvent
-        end
-        shell.run(Config.data["PROGRAM_FOLDER"].."/"..Config.data["STARTUP_PROGRAM"])
-    else
-        print("Checking for updates...")
-        local success,err = pcall(function()
-            local response,http_error = http.get(Config.data["UPDATE_CHANNEL"],HTTP_HEADERS)
-            if response ~= nil then
-                local buildNumber = textutils.unserialise(response.readAll())
-                response.close()
-                if buildNumber[1] > Config.data["CURRENT_BUILD_NUMBER"] then
-                    resetTerminal()
-                    print("An update is available!")
-                    print("Newest build number: "..buildNumber[1])
-                    print("Current build number: "..Config.data["CURRENT_BUILD_NUMBER"].." ["..buildNumber[1]-Config.data["CURRENT_BUILD_NUMBER"].." version(s) behind]")
-                    print("")
-                    if Config.data["AUTO_UPDATE"] == "true" then
-                        print("Auto-update enabled!")
-                        doUpdate(buildNumber[1],buildNumber[2])
-                    else
-                        print("Auto-update disabled!")
-                        print("Out-of-date program will load in "..Config.data["MANUAL_UPDATE_TIME"].." seconds")
-                        write("Update? (Y/N) > ")
-                        local canExit = true
-                        local function timeOut()
-                            os.sleep(tonumber(Config.data["MANUAL_UPDATE_TIME"]))
-                            if canExit == false then -- if update takes more than MANUAL_UPDATE_TIME seconds, this will prevent exit and won't run program
-                                while true do
-                                    os.sleep(10) -- just wait forever, once watchUpdate is done this will stop because of the waitForAny
-                                end
-                            end
-                        end
-                        local function watchUpdate()
-                            while true do
-                                local input = read()
-                                if string.lower(input) == "y" then
-                                    canExit = false
-                                    doUpdate(buildNumber[1],buildNumber[2])
-                                    break
-                                elseif string.lower(input) == "n" then
-                                    break
-                                end
-                            end
-                        end
-                        parallel.waitForAny(timeOut,watchUpdate)
-                        term.setCursorBlink(false)
-                        print("")
-                        print("Running build "..Config.data["CURRENT_BUILD_NUMBER"])
-                    end
-                else
-                    -- Up-to-date
-                    print("Up to date! Running build "..Config.data["CURRENT_BUILD_NUMBER"])
-                    os.sleep(0.5)
-                end
-            else
-                error("Unable to check for update: "..http_error)
-            end
-        end)
-        if success == true then
-            if Config.data["RESTORE_PULLEVENT"] == "true" then
-                os.pullEvent = _pullEvent
-            end
-            shell.run(Config.data["PROGRAM_FOLDER"].."/"..Config.data["STARTUP_PROGRAM"])
-        else
-            print("ATTENTION: Is buildnumber.txt malformed?")
-            print("WARNING: CANNOT CHECK FOR UPDATES: "..err)
-            os.sleep(5)
-            if Config.data["RESTORE_PULLEVENT"] == "true" then
-                os.pullEvent = _pullEvent
-            end
-            shell.run(Config.data["PROGRAM_FOLDER"].."/"..Config.data["STARTUP_PROGRAM"])
-        end
-    end
-end
-
 parallel.waitForAny(bootTimer,keyInterrupt) -- main
 
 if interrupt == 0 then -- Continue booting
     resetTerminal()
     if Config.data["USER_PASSWORD"] == "" then
-        loadMainProgram()
+        Updater.checkAndRun(_pullEvent)
     else
         local attempt = 1
         repeat
             write("Enter admin or user password > ")
             local psw = read("*")
             if psw == Config.data["USER_PASSWORD"] or psw == Config.data["ADMIN_PASSWORD"] then
-                loadMainProgram()
+                Updater.checkAndRun(_pullEvent)
                 break
             else
                 print("Incorrect password")
