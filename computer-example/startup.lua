@@ -157,7 +157,13 @@ local function loadInterruptSettings()
         end
         table.sort(alphaOrder)
         for i=1,#alphaOrder do
-            print(alphaOrder[i].." : "..SETTINGS[alphaOrder[i]])
+            local currentSetting = SETTINGS[alphaOrder[i]]
+
+            if currentSetting ~= "" and (alphaOrder[i] == "ADMIN_PASSWORD" or alphaOrder[i] == "USER_PASSWORD" or alphaOrder[i] == "TOKEN_FOR_PRIVATE_REPO") then
+                currentSetting = "<set>"
+            end
+
+            print(alphaOrder[i].." : "..currentSetting)
         end
 
         print("")
