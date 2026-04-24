@@ -1,7 +1,7 @@
 -- MIT License
 -- Copyright (c) 2026 frogIsDeveloping
 
--- Bootloader v1.3.0-alpha
+-- Bootloader v1.3.0-beta
 
 local interrupt = 0
 local SETTINGS = {}
@@ -82,7 +82,7 @@ loadSettings()
 local function bootTimer()
     for i=tonumber(SETTINGS["BOOT_TIME"]),1,-1 do
         resetTerminal()
-        print("BOOTLOADER v1.3.0-alpha") -- version
+        print("BOOTLOADER v1.3.0-beta") -- version
         print("")
         print("Booting in "..i.."...")
         print("Strike F3 key to interrupt boot")
@@ -406,7 +406,6 @@ local function loadMainProgram()
                     os.sleep(0.5)
                 end
             else
-                print("ATTENTION: Is buildnumber.txt malformed?")
                 error("Unable to check for update: "..http_error)
             end
         end)
@@ -416,6 +415,7 @@ local function loadMainProgram()
             end
             shell.run(SETTINGS["PROGRAM_FOLDER"].."/"..SETTINGS["STARTUP_PROGRAM"])
         else
+            print("ATTENTION: Is buildnumber.txt malformed?")
             print("WARNING: CANNOT CHECK FOR UPDATES: "..err)
             os.sleep(5)
             if SETTINGS["RESTORE_PULLEVENT"] == "true" then
