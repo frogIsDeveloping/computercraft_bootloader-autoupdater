@@ -8,57 +8,41 @@ os.pullEvent = os.pullEventRaw
 settings.set("shell.allow_disk_startup",false)
 settings.save()
 
-local bootloader_success, bootloader_error = pcall(function()
 
-    local interrupt = 0
+-- load config first, other modules may rely on config being loaded
+local Config = require("BOOTLOADER/config") 
+local Config_loadSuccess, Config_loadError = Config.load()
+if not Config_loadSuccess then
+    error("[Error while loading bootloader config: "..Config_loadError)
+end
 
-    -- load config first, other modules may rely on config being loaded
-    local Config = require("BOOTLOADER/config") 
-    local Config_loadSuccess, Config_loadError = Config.load()
-    if not Config_loadSuccess then
-        error("[TERMINATION_CRITICAL] Error while loading bootloader config: "..Config_loadError)
-    end
+local UI = require("BOOTLOADER/ui")
+local Updater = require("BOOTLOADER/updater")
 
-    local UI = require("BOOTLOADER/ui")
-    local Updater = require("BOOTLOADER/updater")
+UI.resetTerminal()
 
-    UI.resetTerminal()
+local interrupt = UI.runBootTimer("v2.0.0-alpha")
 
-    interrupt = UI.runBootTimer("v2.0.0-alpha")
+if interrupt == 0 then -- Continue booting
+    UI.normalBoot(_pullEvent, Updater.checkAndRun)
+elseif interrupt == 1 then -- Interrupt booting, enter config
+    UI.configInterrupt()
+elseif interrupt == 2 then -- Interrupt booting, enter startup program change
+    UI.startupInterrupt()
+end
 
-    if interrupt == 0 then -- Continue booting
-        UI.normalBoot(_pullEvent,Updater.checkAndRun)
-    elseif interrupt == 1 then -- Interrupt booting, enter config
-        UI.configInterrupt()
-    elseif interrupt == 2 then -- Interrupt booting, enter startup program change
-        UI.startupInterrupt()
-    end
-
-    if Config.data["END_OF_SEQUENCE"] == "shutdown" then
-        print("End of sequence! Shutting down...")
-        os.sleep(5)
-        os.shutdown()
-    elseif Config.data["END_OF_SEQUENCE"] == "reboot" then
-        print("End of sequence! Rebooting...")
-        os.sleep(5)
-        os.reboot()
-    elseif Config.data["END_OF_SEQUENCE"] == "wait" then
-        print("End of sequence! Waiting...")
-        while true do
-            os.sleep(10)
-        end
-    end
-    print("End of sequence! Terminating...")
-    --[Terminate]
-end)
-
-if not bootloader_success then
-    if string.find(bootloader_error,"[TERMINATION_CRITICAL]",1,true) then
-        local msg = bootloader_error:gsub("%[TERMINATION_CRITICAL%]", ""):gsub("^%s+", ""):gsub("%s+$", "")
-        print(msg)
-        -- [Terminate]
-    else
-        print(bootloader_error)
-        while true do os.sleep(10) end
+if Config.data["END_OF_SEQUENCE"] == "shutdown" then
+    print("End of sequence! Shutting down...")
+    os.sleep(5)
+    os.shutdown()
+elseif Config.data["END_OF_SEQUENCE"] == "reboot" then
+    print("End of sequence! Rebooting...")
+    os.sleep(5)
+    os.reboot()
+elseif Config.data["END_OF_SEQUENCE"] == "wait" then
+    print("End of sequence! Waiting...")
+    while true do
+        os.sleep(10)
     end
 end
+print("End of sequence! Terminating...")

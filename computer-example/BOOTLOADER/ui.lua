@@ -146,7 +146,7 @@ local function loadInterruptConfig()
         elseif string.lower(input) == "quit" or string.lower(input) == "reboot" then
             os.reboot()
         elseif string.lower(input) == "terminate" then
-            error("[TERMINATION_CRITICAL] User termination")
+            error("User termination")
         else
             print("Invalid option")
             os.sleep(1)

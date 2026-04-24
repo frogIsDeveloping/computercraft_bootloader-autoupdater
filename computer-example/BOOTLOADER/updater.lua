@@ -121,6 +121,8 @@ function Updater.checkAndRun(_pullEvent)
         end
     end
 
+
+    -- RUN
     if Config.data["RESTORE_PULLEVENT"] == "true" then
         os.pullEvent = _pullEvent
     end
