@@ -20,37 +20,54 @@ local function resetTerminal()
 end
 
 -- load settings
+local DEFAULT_SETTINGS = {
+    ["UPDATE_CHANNEL"] = "https://raw.githubusercontent.com/frogIsDeveloping/computercraft_bootloader-autoupdater/refs/heads/latest/auto-update_example/buildNumber.txt";
+    ["AUTO_UPDATE"] = "false";
+    ["TOKEN_FOR_PRIVATE_REPO"] = "";
+
+    ["BOOT_TIME"] = "5";
+    ["MANUAL_UPDATE_TIME"] = "10";
+    ["PROGRAM_FOLDER"] = "src";
+    ["STARTUP_PROGRAM"] = "startup.lua";
+    ["USER_PASSWORD"] = "";
+    ["ADMIN_PASSWORD"] = "";
+    ["END_OF_SEQUENCE"] = "shutdown";
+    ["RESTORE_PULLEVENT"] = "false";
+
+    ["LOADED"] = 1;
+    ["CURRENT_BUILD_NUMBER"] = 0;
+}
 local function loadSettings()
     local success, err = pcall(function()
         local file = fs.open("SETTINGS.txt","r")
+        local missingSetting = false
         if file then
             SETTINGS = textutils.unserialise(file.readAll())
+            file.close()
+
             if SETTINGS["LOADED"] ~= 1 then
                 error("SETTINGS FILE CORRUPTED")
             end
-            file.close()
+
+            -- if something is missing, add it
+            for i in pairs(DEFAULT_SETTINGS) do
+                if SETTINGS[i] == nil then
+                    SETTINGS[i] = DEFAULT_SETTINGS[i]
+                    missingSetting = true
+                end
+            end
 
             if SETTINGS["TOKEN_FOR_PRIVATE_REPO"] ~= "" then -- private repo support
                 HTTP_HEADERS["Authorization"] = "Bearer "..SETTINGS["TOKEN_FOR_PRIVATE_REPO"]
             end
         else
-            -- Default settings
-            SETTINGS["UPDATE_CHANNEL"] = "https://raw.githubusercontent.com/frogIsDeveloping/computercraft_bootloader-autoupdater/refs/heads/latest/auto-update_example/buildNumber.txt"
-            SETTINGS["AUTO_UPDATE"] = "false"
-            SETTINGS["TOKEN_FOR_PRIVATE_REPO"] = ""
+            for i in pairs(DEFAULT_SETTINGS) do
+                SETTINGS[i] = DEFAULT_SETTINGS[i]
+            end
+            missingSetting = true
+        end
 
-            SETTINGS["BOOT_TIME"] = "5"
-            SETTINGS["MANUAL_UPDATE_TIME"] = "10"
-            SETTINGS["PROGRAM_FOLDER"] = "src"
-            SETTINGS["STARTUP_PROGRAM"] = "startup.lua"
-            SETTINGS["USER_PASSWORD"] = ""
-            SETTINGS["ADMIN_PASSWORD"] = ""
-            SETTINGS["END_OF_SEQUENCE"] = "shutdown"
-            SETTINGS["RESTORE_PULLEVENT"] = "false"
-
-            -- do not change below
-            SETTINGS["LOADED"] = 1
-            SETTINGS["CURRENT_BUILD_NUMBER"] = 0
+        if missingSetting == true then
             file = fs.open("SETTINGS.txt","w")
             file.write(textutils.serialise(SETTINGS,{compact=true}))
             file.close()
@@ -58,8 +75,6 @@ local function loadSettings()
     end)
     if success == false then
         error("BOOTLOADER CRASH: SETTINGS CORRUPTED: "..err)
-        --os.sleep(5)
-        --os.shutdown()
     end
 end
 loadSettings()
