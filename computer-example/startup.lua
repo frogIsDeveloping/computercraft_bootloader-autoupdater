@@ -13,7 +13,7 @@ settings.save()
 local Config = require("BOOTLOADER/config") 
 local Config_loadSuccess, Config_loadError = Config.load()
 if not Config_loadSuccess then
-    error("[Error while loading bootloader config: "..Config_loadError)
+    error("Error while loading bootloader config: "..Config_loadError)
 end
 
 local UI = require("BOOTLOADER/ui")

@@ -4,6 +4,7 @@
 -- UI module build 1
 
 local Config = require("BOOTLOADER/config")
+local Completion = require("cc.completion")
 
 local UI = {}
 
@@ -84,8 +85,17 @@ local function loadInterruptConfig()
         end
 
         print("")
-        print("Enter setting to change, 'quit' or 'terminate' > ")
-        local input = string.upper(read())
+        print("Enter setting to change, 'QUIT' or 'TERMINATE' > ")
+        local autoComplete = {}
+        for i=1,#alphaOrder do
+            autoComplete[#autoComplete+1] = alphaOrder[i]
+        end
+        autoComplete[#autoComplete+1] = "QUIT"
+        autoComplete[#autoComplete+1] = "TERMINATE"
+        autoComplete[#autoComplete+1] = "REBOOT"
+        autoComplete[#autoComplete+1] = "SHUTDOWN"
+
+        local input = string.upper(read(nil,nil, function(text) return Completion.choice(text,autoComplete) end))
         if Config.data[input] ~= nil and input ~= "LOADED" and input ~= "CURRENT_BUILD_NUMBER" then -- edit a setting
             print("Changing "..input.." enter new value:")
             local input2 = read():gsub(" ","") -- remove blank spaces
@@ -143,10 +153,12 @@ local function loadInterruptConfig()
                 print("Operation cancelled")
                 os.sleep(1)
             end
-        elseif string.lower(input) == "quit" or string.lower(input) == "reboot" then
+        elseif input == "QUIT" or input == "REBOOT" then
             os.reboot()
-        elseif string.lower(input) == "terminate" then
+        elseif input == "TERMINATE" then
             error("User termination")
+        elseif input == "SHUTDOWN" then
+            os.shutdown()
         else
             print("Invalid option")
             os.sleep(1)
