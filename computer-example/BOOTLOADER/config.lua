@@ -3,6 +3,7 @@
 
 -- Config module build 1
 
+local Backup_Handler = require("BOOTLOADER/backupHandler")
 local Config = {}
 Config.data = {}
 Config.http_headers = {}
@@ -29,43 +30,32 @@ function Config.save()
     local mustShutdown
     print("Saving config...")
 
-     if fs.exists("BOOTLOADER/CONFIG_DATA-BACKUP.txt") then
-        pcall(function() fs.delete("BOOTLOADER/CONFIG_DATA-BACKUP.txt") end)
-    end
-
-    local success, err = pcall(function()
-        if fs.exists("BOOTLOADER/CONFIG_DATA.txt") then
-            fs.copy("BOOTLOADER/CONFIG_DATA.txt","BOOTLOADER/CONFIG_DATA-BACKUP.txt")
-        end
-    end)
-    if success == true then
-        success, err = pcall(function()
+    local backup, backup_err = Backup_Handler.doBackup("BOOTLOADER/CONFIG_DATA.txt")
+    if backup then
+        local success, err = pcall(function()
             local file = fs.open("BOOTLOADER/CONFIG_DATA.txt","w")
             file.write(textutils.serialise(Config.data,{compact=true}))
             file.close()
         end)
         if success == true then
-            pcall(function() fs.delete("BOOTLOADER/CONFIG_DATA-BACKUP.txt") end)
+            Backup_Handler.cleanup("BOOTLOADER/CONFIG_DATA.txt")
             print("Config saved successfully")
             os.sleep(1)
         else
             mustShutdown = true
             print("FAIL: Could not write to config: ",err)
-            pcall(function() fs.delete("BOOTLOADER/CONFIG_DATA.txt") end)
-            success, err = pcall(function()
-                fs.copy("BOOTLOADER/CONFIG_DATA-BACKUP.txt","BOOTLOADER/CONFIG_DATA.txt")
-            end)
-            if success == true then
-                pcall(function() fs.delete("BOOTLOADER/CONFIG_DATA-BACKUP.txt") end)
+
+            local restore, restore_err = Backup_Handler.restoreBackup("BOOTLOADER/CONFIG_DATA.txt")
+            if restore then
                 print("A backup of config was restored successfully.")
             else
-                print("FAIL #2: Could not restore config backup: ",err)
+                print("FAIL #2: Could not restore config backup: ",restore_err)
                 print("WARNING: Config may have corrupted")
             end
         end
     else
+        print("FAIL: could not create config backup: "..backup_err)
         mustShutdown = true
-        print("FAIL: Could not create config backup: "..err)
     end
 
     if mustShutdown then
