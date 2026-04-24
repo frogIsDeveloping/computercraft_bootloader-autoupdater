@@ -38,22 +38,24 @@ If you have added files, add them to the projectFileNames table. **DO NOT** remo
 
 
 ## Settings
-**UPDATE_CHANNEL**: For auto-update. If empty, disables this feature. To enable, link to a `buildNumber.txt` raw file link.
-  
 **ADMIN_PASSWORD**: Similar to a BIOS boot, password to enter when startup sequence is interrupted. Disabled (no password) if empty.  
   
 **AUTO_UPDATE**: If set to `true`, will automatically update program(s) on boot (if a newer version was found) from the `UPDATE_CHANNEL`. If set to `false`, then it will prompt to update on boot if an update is available. This can be accepted or denied, and if there is no user input for a set amount of time, the bootloader will load the program(s) without updating.  
   
-**RESTORE_PULLEVENT**: By default, the bootloader and program(s) are loaded with `os.pullEvent = os.pullEventRaw` to prevent termination. However, if `RESTORE_PULLEVENT` is set to `true`, then `pullEvent` will be restored when a program is loaded. In this case, the bootloader itself can be terminated after the program(s) have ran. This removes security.  
-  
-**STARTUP_PROGRAM**: This is the name and extension (`.lua`) of the program to load on boot.  
-  
-**PROGRAM_FOLDER**: All program(s) loaded by the bootloader must be in a separate folder from root. This is the name of the folder.  
-  
-**USER_PASSWORD**: Similar to a BIOS boot, password to enter to boot the computer. Disabled (no password, autoboot) if empty. *Attention*: If no admin password is set, then this does not act as a security measure, but rather just a measure to confirm a boot.  
-  
-**END_OF_SEQUENCE**: When the loaded program has finished, it triggers an end of sequennce. This can be set to `shutdown`, `reboot`, `wait` (to do nothing) or `terminate` (default computercraft behavior).  
-  
+**BOOT_TIME**: The initial boot timer, essentially the number of seconds one has to interrupt the boot and access the settings.  
+
+**END_OF_SEQUENCE**: When the loaded program has finished, it triggers an "end of sequennce". This can be set to `shutdown`, `reboot`, `wait` (to do nothing) or `terminate` (default computercraft behavior). 
+
 **MANUAL_UPDATE_TIME**: When a new update is available, and auto-update is disabled, the time a user has to proceed or not with the update. If there is no response for this amount of time, the bootloader automatically loads the (outdated) program without proceeding with the update.  
+
+**PROGRAM_FOLDER**: All program(s) loaded by the bootloader must be in a separate folder from root. This is the name of the folder.  
+
+**RESTORE_PULLEVENT**: By default, the bootloader and program(s) are loaded with `os.pullEvent = os.pullEventRaw` to prevent termination. However, if `RESTORE_PULLEVENT` is set to `true`, then `pullEvent` will be restored when the startup program is loaded. In this case, there is essentially no more termination security from the bootloader; this can then be handled by the program itself.  
+
+**STARTUP_PROGRAM**: This is the name and extension (`.lua`) of the program to load on boot.  
+
+**TOKEN_FOR_PRIVATE_REPO**: This is the github_pat_[token] (only "Contents" read-only permissions required) needed to access a `buildNumber.txt` raw file from a ___private___ repo. If you are reading `buildNumber.txt` from a private repo, remove the token at the end of the raw link (so it ends with `buildNumber.txt`).
   
-**BOOT_TIME**: The initial boot timer, essentially the number of seconds one has to interrupt the boot and access the settings.
+**UPDATE_CHANNEL**: For auto-update. If empty, disables this feature. To enable, link to a `buildNumber.txt` raw file link.
+  
+**USER_PASSWORD**: Similar to a BIOS boot, password to enter to boot the computer. Disabled (no password, autoboot) if empty. *Attention*: If no admin password is set, then this does not act as a security measure, but rather just a measure to confirm a boot.
