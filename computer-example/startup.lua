@@ -406,7 +406,6 @@ local function loadMainProgram()
                     os.sleep(0.5)
                 end
             else
-                print("ATTENTION: Is buildnumber.txt malformed?")
                 error("Unable to check for update: "..http_error)
             end
         end)
@@ -416,6 +415,7 @@ local function loadMainProgram()
             end
             shell.run(SETTINGS["PROGRAM_FOLDER"].."/"..SETTINGS["STARTUP_PROGRAM"])
         else
+            print("ATTENTION: Is buildnumber.txt malformed?")
             print("WARNING: CANNOT CHECK FOR UPDATES: "..err)
             os.sleep(5)
             if SETTINGS["RESTORE_PULLEVENT"] == "true" then
