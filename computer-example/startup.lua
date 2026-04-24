@@ -148,11 +148,18 @@ local function loadInterruptSettings()
         resetTerminal()
         print("Showing settings:")
         print("")
+
+        local alphaOrder = {}
         for i in pairs(SETTINGS) do
             if i ~= "LOADED" and i ~= "CURRENT_BUILD_NUMBER" then
-                print(i.." : "..SETTINGS[i])
+                alphaOrder[#alphaOrder+1] = i 
             end
         end
+        table.sort(alphaOrder)
+        for i=1,#alphaOrder do
+            print(alphaOrder[i].." : "..SETTINGS[alphaOrder[i]])
+        end
+
         print("")
         print("Enter setting to change, 'quit' or 'terminate' > ")
         local input = string.upper(read())
