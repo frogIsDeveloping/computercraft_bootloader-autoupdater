@@ -2,7 +2,7 @@
 
 A custom bootloader made to protect the computer from unauthorized changes (e.g. program termination to access files) and to (optionally) support auto/manual updating directly from GitHub repositories (public and private repos supported). It can also be used to lock the computer entirely by setting a user password.  
 The bootloader itself does not auto-update.  
-It's also possible to use it to initiate many computers, as the files to autoupdate (if any) do not have to be present initially on the computer to be downloaded (only the `PROGRAM_FOLDER`, but hey just `mkdir`).  
+It's also possible to use it to initiate many computers, as the files to autoupdate (if any) do not have to be present initially on the computer to be downloaded.
   
 **DISCLAIMER**: I have created this for my own, amateur use. You are free to use it but it may not fit your exact needs.
 
@@ -46,16 +46,14 @@ If you have added files, add them to the projectFileNames table. **DO NOT** remo
 
 **END_OF_SEQUENCE**: When the loaded program has finished, it triggers an "end of sequennce". This can be set to `shutdown`, `reboot`, `wait` (to do nothing) or `terminate` (default computercraft behavior). 
 
-**MANUAL_UPDATE_TIME**: When a new update is available, and auto-update is disabled, the time a user has to proceed or not with the update. If there is no response for this amount of time, the bootloader automatically loads the (outdated) program without proceeding with the update.  
-
 **PROGRAM_FOLDER**: All program(s) loaded by the bootloader must be in a separate folder from root. This is the name of the folder.  
 
 **RESTORE_PULLEVENT**: By default, the bootloader and program(s) are loaded with `os.pullEvent = os.pullEventRaw` to prevent termination. However, if `RESTORE_PULLEVENT` is set to `true`, then `pullEvent` will be restored when the startup program is loaded. In this case, there is essentially no more termination security from the bootloader; this can then be handled by the program itself.  
 
 **STARTUP_PROGRAM**: This is the name and extension (`.lua`) of the program to load on boot.  
 
-**TOKEN_FOR_PRIVATE_REPO**: This is the github_pat_[token] (only "Contents" read-only permissions required) needed to access a `buildNumber.txt` raw file from a ___private___ repo. If you are reading `buildNumber.txt` from a private repo, remove the token at the end of the raw link (so it ends with `buildNumber.txt`).
+**TOKEN_FOR_PRIVATE_REPO**: This is the github_pat_[token] (only "Contents" read-only permissions required) needed to access a `buildNumber.txt` raw file from a ___private___ repo.
   
-**UPDATE_CHANNEL**: For auto-update. If empty, disables this feature. To enable, link to a `buildNumber.txt` raw file link.
+**UPDATE_CHANNEL**: For auto-update. If empty, disables this feature. To enable, link to a `buildNumber.txt` raw file link. If you are reading `buildNumber.txt` from a private repo, remove the token at the end of the raw link (so it ends with `buildNumber.txt`).
   
 **USER_PASSWORD**: Similar to a BIOS boot, password to enter to boot the computer. Disabled (no password, autoboot) if empty. *Attention*: If no admin password is set, then this does not act as a security measure, but rather just a measure to confirm a boot.
