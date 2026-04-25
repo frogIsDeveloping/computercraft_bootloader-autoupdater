@@ -1,6 +1,8 @@
 -- MIT License
 -- Copyright (c) 2026 frogIsDeveloping
 
+-- Installer build 1
+
 local initLink = "https://raw.githubusercontent.com/frogIsDeveloping/computercraft_bootloader-autoupdater/refs/heads/"
 local branch = nil
 local bootloader = "/computer-example/startup.lua"
@@ -71,6 +73,17 @@ while true do
             print("Continue? (Y/N) > ")
             if string.lower(read()) ~= "y" then
                 return
+            end
+        end
+
+        if fs.exists("SETTINGS.txt") then -- for v1
+            print("ATTENTION: Configuration from v1 bootloader detected")
+            print("Do you want to transfer it over? (Y/N)")
+            if string.lower(read()) == "y" then
+                pcall(function()
+                    fs.copy("SETTINGS.txt","BOOTLOADER/CONFIG_DATA.txt")
+                    fs.delete("SETTINGS.txt")
+                end)
             end
         end
 
