@@ -26,7 +26,6 @@ function Backup_Handler.cleanup(path)
 end
 
 function Backup_Handler.restoreBackup(path) -- do not include the "-BACKUP" in path
-
     if not fs.exists(path.."-BACKUP") then
         return false, "No backup for this file"
     end
