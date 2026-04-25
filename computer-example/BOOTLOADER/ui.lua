@@ -94,6 +94,7 @@ local function loadInterruptConfig()
         autoComplete[#autoComplete+1] = "TERMINATE"
         autoComplete[#autoComplete+1] = "REBOOT"
         autoComplete[#autoComplete+1] = "SHUTDOWN"
+        autoComplete[#autoComplete+1] = "UNINSTALL"
 
         local input = string.upper(read(nil,nil, function(text) return Completion.choice(text,autoComplete) end))
         if Config.data[input] ~= nil and input ~= "LOADED" and input ~= "CURRENT_BUILD_NUMBER" then -- edit a setting
@@ -159,6 +160,23 @@ local function loadInterruptConfig()
             error("User termination")
         elseif input == "SHUTDOWN" then
             os.shutdown()
+        elseif input == "UNINSTALL" then
+            term.setBackgroundColor(colors.lightGray)
+            print("Are you sure you want to uninstall the bootloader? If so, write 'yes uninstall' >")
+            local uninstallAns = string.lower(read())
+            if uninstallAns == "yes uninstall" then
+                settings.set("shell.allow_disk_startup", true)
+                settings.save()
+
+                pcall(function()
+                    fs.delete("BOOTLOADER")
+                    fs.delete("startup.lua")
+                end)
+                os.reboot()
+            end
+            term.setBackgroundColor(colors.black)
+            print("Aborted")
+            os.sleep(1)
         else
             print("Invalid option")
             os.sleep(1)
