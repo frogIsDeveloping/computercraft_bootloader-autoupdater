@@ -81,6 +81,7 @@ while true do
             print("Do you want to transfer it over? (Y/N)")
             if string.lower(read()) == "y" then
                 pcall(function()
+                    fs.delete("BOOTLOADER/CONFIG_DATA.txt")
                     fs.copy("SETTINGS.txt","BOOTLOADER/CONFIG_DATA.txt")
                     fs.delete("SETTINGS.txt")
                 end)
