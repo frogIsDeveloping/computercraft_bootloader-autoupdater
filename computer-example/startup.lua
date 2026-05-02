@@ -1,7 +1,7 @@
 -- MIT License
 -- Copyright (c) 2026 frogIsDeveloping
 
--- Bootloader v2.0.0-alpha
+-- Bootloader v2.0.0-beta
 
 local _pullEvent = os.pullEvent -- for later restore (if needed)
 os.pullEvent = os.pullEventRaw
@@ -21,7 +21,7 @@ local Updater = require("BOOTLOADER/updater")
 
 UI.resetTerminal()
 
-local interrupt = UI.runBootTimer("v2.0.0-alpha")
+local interrupt = UI.runBootTimer("v2.0.0-beta")
 
 if interrupt == 0 then -- Continue booting
     UI.normalBoot(_pullEvent, Updater.checkAndRun)
